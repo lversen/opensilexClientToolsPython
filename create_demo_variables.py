@@ -2,9 +2,12 @@
 """
 OpenSilex Smart Demo Variables Creator
 
-This script first discovers what ontology concepts (entities, characteristics, methods, units)
-are available in your OpenSilex system, then creates demo variables using those existing concepts.
-If no concepts exist, it will offer to create basic ones first.
+This script creates demo ontology concepts (entities, characteristics, methods, units)
+and variables in your OpenSilex system. It fixes the URI serialization issue by properly
+capturing and using the returned URIs from concept creation.
+
+Fixed Issue: The original script was passing JSON objects to VariableCreationDTO.entity
+instead of URI strings, causing "Cannot deserialize value of type java.net.URI" errors.
 """
 
 import opensilexClientToolsPython
@@ -13,7 +16,6 @@ from opensilexClientToolsPython.models.entity_creation_dto import EntityCreation
 from opensilexClientToolsPython.models.characteristic_creation_dto import CharacteristicCreationDTO
 from opensilexClientToolsPython.models.method_creation_dto import MethodCreationDTO
 from opensilexClientToolsPython.models.unit_creation_dto import UnitCreationDTO
-from opensilexClientToolsPython.models.interest_entity_creation_dto import InterestEntityCreationDTO
 import sys
 
 def connect_to_opensilex(host, identifier, password):
@@ -48,12 +50,100 @@ def check_if_concepts_exist(variables_api):
                 if hasattr(first_item, 'name') and first_item.name and first_item.name not in ['metadata', 'result']:
                     return True
         return False
-    except:
+    except Exception as e:
+        print(f"Warning: Could not check existing concepts: {e}")
         return False
 
+def extract_uri_from_response(response):
+    """Extract URI string from API response (handles various response formats)"""
+    if isinstance(response, str):
+        return response
+    elif hasattr(response, 'uri'):
+        return response.uri
+    elif hasattr(response, '__dict__'):
+        # If it's an object, try to find a URI field
+        response_dict = response.__dict__
+        if 'uri' in response_dict:
+            return response_dict['uri']
+        # Sometimes the response might have other patterns
+        for key, value in response_dict.items():
+            if 'uri' in key.lower() and isinstance(value, str):
+                return value
+    # If we still haven't found it, convert to string and see if it looks like a URI
+    response_str = str(response)
+    if response_str.startswith('http'):
+        return response_str
+    else:
+        print(f"Warning: Could not extract URI from response: {response} (type: {type(response)})")
+        return None
+
+def list_existing_concepts(variables_api):
+    """List existing concepts in the system"""
+    print("\n🔍 Existing concepts in the system:")
+    
+    try:
+        # List entities
+        entities_response = variables_api.search_entities(page_size=50)
+        if entities_response:
+            entities_list = list(entities_response)
+            if entities_list:
+                print(f"\n📊 Entities ({len(entities_list)}):")
+                for entity in entities_list[:10]:  # Show first 10
+                    if hasattr(entity, 'name') and hasattr(entity, 'uri'):
+                        print(f"  - {entity.name} ({entity.uri})")
+                if len(entities_list) > 10:
+                    print(f"  ... and {len(entities_list) - 10} more")
+    except Exception as e:
+        print(f"  Could not list entities: {e}")
+    
+    try:
+        # List characteristics
+        chars_response = variables_api.search_characteristics(page_size=50)
+        if chars_response:
+            chars_list = list(chars_response)
+            if chars_list:
+                print(f"\n🎯 Characteristics ({len(chars_list)}):")
+                for char in chars_list[:10]:  # Show first 10
+                    if hasattr(char, 'name') and hasattr(char, 'uri'):
+                        print(f"  - {char.name} ({char.uri})")
+                if len(chars_list) > 10:
+                    print(f"  ... and {len(chars_list) - 10} more")
+    except Exception as e:
+        print(f"  Could not list characteristics: {e}")
+    
+    try:
+        # List methods
+        methods_response = variables_api.search_methods(page_size=50)
+        if methods_response:
+            methods_list = list(methods_response)
+            if methods_list:
+                print(f"\n🔬 Methods ({len(methods_list)}):")
+                for method in methods_list[:10]:  # Show first 10
+                    if hasattr(method, 'name') and hasattr(method, 'uri'):
+                        print(f"  - {method.name} ({method.uri})")
+                if len(methods_list) > 10:
+                    print(f"  ... and {len(methods_list) - 10} more")
+    except Exception as e:
+        print(f"  Could not list methods: {e}")
+    
+    try:
+        # List units
+        units_response = variables_api.search_units(page_size=50)
+        if units_response:
+            units_list = list(units_response)
+            if units_list:
+                print(f"\n📏 Units ({len(units_list)}):")
+                for unit in units_list[:10]:  # Show first 10
+                    if hasattr(unit, 'name') and hasattr(unit, 'uri'):
+                        print(f"  - {unit.name} ({unit.uri})")
+                if len(units_list) > 10:
+                    print(f"  ... and {len(units_list) - 10} more")
+    except Exception as e:
+        print(f"  Could not list units: {e}")
+
 def create_basic_concepts(variables_api):
-    """Create basic ontology concepts if none exist"""
-    print("\n🏗️ Creating basic ontology concepts...")
+    """Create basic ontology concepts and return their URIs"""
+    print(f"\n🏗️ Creating basic ontology concepts...")
     print("-" * 60)
     
     created_concepts = {
@@ -63,37 +153,34 @@ def create_basic_concepts(variables_api):
         'units': []
     }
     
-    # Basic entities
+    # Define basic concepts
     basic_entities = [
-        {"name": "Plant", "description": "Plant organism"},
-        {"name": "Soil", "description": "Soil medium"},
+        {"name": "Plant", "description": "A living plant organism"},
+        {"name": "Soil", "description": "The upper layer of earth"},
         {"name": "Environment", "description": "Environmental conditions"},
-        {"name": "Leaf", "description": "Plant leaf"},
-        {"name": "Seed", "description": "Plant seed"}
+        {"name": "Leaf", "description": "Plant leaf structure"},
+        {"name": "Seed", "description": "Plant reproductive unit"}
     ]
     
-    # Basic characteristics
     basic_characteristics = [
         {"name": "Height", "description": "Vertical measurement"},
         {"name": "Weight", "description": "Mass measurement"},
         {"name": "Temperature", "description": "Thermal measurement"},
-        {"name": "Moisture", "description": "Water content"},
-        {"name": "Color", "description": "Visual color attribute"},
+        {"name": "Moisture", "description": "Water content measurement"},
+        {"name": "Color", "description": "Visual color characteristic"},
         {"name": "Count", "description": "Numerical count"},
         {"name": "Area", "description": "Surface area measurement"},
         {"name": "Length", "description": "Linear measurement"}
     ]
     
-    # Basic methods
     basic_methods = [
-        {"name": "Manual Measurement", "description": "Manual measurement with tools"},
-        {"name": "Visual Observation", "description": "Visual assessment"},
+        {"name": "Manual Measurement", "description": "Manual measurement using tools"},
+        {"name": "Visual Observation", "description": "Visual assessment method"},
         {"name": "Sensor Reading", "description": "Automated sensor measurement"},
-        {"name": "Laboratory Analysis", "description": "Laboratory analytical method"},
-        {"name": "Digital Image Analysis", "description": "Computer vision analysis"}
+        {"name": "Laboratory Analysis", "description": "Laboratory-based analysis"},
+        {"name": "Digital Image Analysis", "description": "Computer-based image analysis"}
     ]
     
-    # Basic units
     basic_units = [
         {"name": "centimeter", "symbol": "cm", "description": "Length unit"},
         {"name": "gram", "symbol": "g", "description": "Mass unit"},
@@ -111,8 +198,12 @@ def create_basic_concepts(variables_api):
         try:
             entity = EntityCreationDTO(**entity_data)
             result = variables_api.create_entity(body=entity)
-            created_concepts['entities'].append({'name': entity_data['name'], 'uri': result})
-            print(f"  ✓ Created entity: {entity_data['name']}")
+            uri = extract_uri_from_response(result)
+            if uri:
+                created_concepts['entities'].append({'name': entity_data['name'], 'uri': uri})
+                print(f"  ✓ Created entity: {entity_data['name']} -> {uri}")
+            else:
+                print(f"  ✗ Failed to extract URI for entity {entity_data['name']}")
         except Exception as e:
             print(f"  ✗ Failed to create entity {entity_data['name']}: {e}")
     
@@ -122,8 +213,12 @@ def create_basic_concepts(variables_api):
         try:
             characteristic = CharacteristicCreationDTO(**char_data)
             result = variables_api.create_characteristic(body=characteristic)
-            created_concepts['characteristics'].append({'name': char_data['name'], 'uri': result})
-            print(f"  ✓ Created characteristic: {char_data['name']}")
+            uri = extract_uri_from_response(result)
+            if uri:
+                created_concepts['characteristics'].append({'name': char_data['name'], 'uri': uri})
+                print(f"  ✓ Created characteristic: {char_data['name']} -> {uri}")
+            else:
+                print(f"  ✗ Failed to extract URI for characteristic {char_data['name']}")
         except Exception as e:
             print(f"  ✗ Failed to create characteristic {char_data['name']}: {e}")
     
@@ -133,8 +228,12 @@ def create_basic_concepts(variables_api):
         try:
             method = MethodCreationDTO(**method_data)
             result = variables_api.create_method(body=method)
-            created_concepts['methods'].append({'name': method_data['name'], 'uri': result})
-            print(f"  ✓ Created method: {method_data['name']}")
+            uri = extract_uri_from_response(result)
+            if uri:
+                created_concepts['methods'].append({'name': method_data['name'], 'uri': uri})
+                print(f"  ✓ Created method: {method_data['name']} -> {uri}")
+            else:
+                print(f"  ✗ Failed to extract URI for method {method_data['name']}")
         except Exception as e:
             print(f"  ✗ Failed to create method {method_data['name']}: {e}")
     
@@ -144,10 +243,29 @@ def create_basic_concepts(variables_api):
         try:
             unit = UnitCreationDTO(**unit_data)
             result = variables_api.create_unit(body=unit)
-            created_concepts['units'].append({'name': unit_data['name'], 'uri': result})
-            print(f"  ✓ Created unit: {unit_data['name']}")
+            uri = extract_uri_from_response(result)
+            if uri:
+                created_concepts['units'].append({'name': unit_data['name'], 'uri': uri})
+                print(f"  ✓ Created unit: {unit_data['name']} -> {uri}")
+            else:
+                print(f"  ✗ Failed to extract URI for unit {unit_data['name']}")
         except Exception as e:
             print(f"  ✗ Failed to create unit {unit_data['name']}: {e}")
+    
+    # Debug: Print summary of created concepts
+    print(f"\n🔍 Debug - Created concept summary:")
+    print(f"   Entities: {len(created_concepts['entities'])}")
+    for entity in created_concepts['entities']:
+        print(f"     - {entity['name']}: {entity['uri']}")
+    print(f"   Characteristics: {len(created_concepts['characteristics'])}")
+    for char in created_concepts['characteristics']:
+        print(f"     - {char['name']}: {char['uri']}")
+    print(f"   Methods: {len(created_concepts['methods'])}")
+    for method in created_concepts['methods']:
+        print(f"     - {method['name']}: {method['uri']}")
+    print(f"   Units: {len(created_concepts['units'])}")
+    for unit in created_concepts['units']:
+        print(f"     - {unit['name']}: {unit['uri']}")
     
     return created_concepts
 
@@ -159,12 +277,17 @@ def create_demo_variables(variables_api, created_concepts):
     created_variables = []
     failed_variables = []
     
-    # Helper function to find concept by name
+    # Helper function to find concept URI by name
     def find_concept_uri(concepts_list, name_contains):
         for concept in concepts_list:
             if name_contains.lower() in concept['name'].lower():
                 return concept['uri']
         return None
+    
+    # Validate that we have enough concepts to create variables
+    if not created_concepts['entities'] or not created_concepts['characteristics'] or not created_concepts['methods'] or not created_concepts['units']:
+        print("⚠️ Not enough concepts were created successfully. Cannot create variables.")
+        return [], []
     
     # Create demo variables based on created concepts
     demo_variables = []
@@ -179,12 +302,14 @@ def create_demo_variables(variables_api, created_concepts):
         demo_variables.append({
             "name": "Plant Height",
             "description": "Height measurement of plant in centimeters",
-            "entity": plant_uri,
+            "entity": plant_uri,  # This is now a URI string, not an object
             "characteristic": height_uri,
             "method": manual_uri,
             "unit": cm_uri,
             "datatype": "http://www.w3.org/2001/XMLSchema#decimal"
         })
+    else:
+        print(f"  ⚠️ Skipping Plant Height variable - missing URIs: plant={plant_uri}, height={height_uri}, manual={manual_uri}, cm={cm_uri}")
     
     # Environmental temperature variable
     env_uri = find_concept_uri(created_concepts['entities'], 'environment')
@@ -202,6 +327,8 @@ def create_demo_variables(variables_api, created_concepts):
             "unit": celsius_uri,
             "datatype": "http://www.w3.org/2001/XMLSchema#decimal"
         })
+    else:
+        print(f"  ⚠️ Skipping Environmental Temperature variable - missing URIs: env={env_uri}, temp={temp_uri}, sensor={sensor_uri}, celsius={celsius_uri}")
     
     # Seed weight variable
     seed_uri = find_concept_uri(created_concepts['entities'], 'seed')
@@ -219,6 +346,8 @@ def create_demo_variables(variables_api, created_concepts):
             "unit": gram_uri,
             "datatype": "http://www.w3.org/2001/XMLSchema#decimal"
         })
+    else:
+        print(f"  ⚠️ Skipping Seed Weight variable - missing URIs: seed={seed_uri}, weight={weight_uri}, lab={lab_uri}, gram={gram_uri}")
     
     # Leaf count variable
     leaf_uri = find_concept_uri(created_concepts['entities'], 'leaf')
@@ -236,6 +365,8 @@ def create_demo_variables(variables_api, created_concepts):
             "unit": count_unit_uri,
             "datatype": "http://www.w3.org/2001/XMLSchema#integer"
         })
+    else:
+        print(f"  ⚠️ Skipping Leaf Count variable - missing URIs: leaf={leaf_uri}, count={count_uri}, visual={visual_uri}, count_unit={count_unit_uri}")
     
     # Soil moisture variable
     soil_uri = find_concept_uri(created_concepts['entities'], 'soil')
@@ -252,12 +383,30 @@ def create_demo_variables(variables_api, created_concepts):
             "unit": percent_uri,
             "datatype": "http://www.w3.org/2001/XMLSchema#decimal"
         })
+    else:
+        print(f"  ⚠️ Skipping Soil Moisture Content variable - missing URIs: soil={soil_uri}, moisture={moisture_uri}, sensor={sensor_uri}, percent={percent_uri}")
     
+    print(f"\n📋 Prepared {len(demo_variables)} variables for creation.")
+    if len(demo_variables) == 0:
+        print("⚠️ No variables can be created - insufficient concepts available.")
+        return [], []
+
     # Create the variables
     print("\n📐 Creating variables...")
     for var_data in demo_variables:
         try:
+            # Debug: Print what we're trying to create
+            print(f"  🔧 Attempting to create variable: {var_data['name']}")
+            print(f"     Entity URI: {var_data['entity']}")
+            print(f"     Characteristic URI: {var_data['characteristic']}")
+            print(f"     Method URI: {var_data['method']}")
+            print(f"     Unit URI: {var_data['unit']}")
+            
             variable = VariableCreationDTO(**var_data)
+            
+            # Debug: Print the created DTO to see what it looks like
+            print(f"     Created DTO - Entity: {variable.entity} (type: {type(variable.entity)})")
+            
             result = variables_api.create_variable(body=variable)
             created_variables.append({
                 'name': var_data['name'],
@@ -272,6 +421,8 @@ def create_demo_variables(variables_api, created_concepts):
                 'data': var_data
             })
             print(f"  ✗ Failed to create variable {var_data['name']}: {e}")
+            # Debug: Print more details about the failure
+            print(f"     Variable data that failed: {var_data}")
     
     return created_variables, failed_variables
 
@@ -283,7 +434,7 @@ def main():
     # Configuration
     host = "http://48.209.64.78:28081/sandbox/rest"
     identifier = "admin@opensilex.org"  
-    password = "admin"
+    password = "admin"  # You might want to get this from environment variable
     
     print(f"Host: {host}")
     print(f"User: {identifier}")
@@ -306,8 +457,27 @@ def main():
     
     if has_concepts:
         print("✓ Found existing concepts in the system")
-        print("⚠️ This script is designed for empty systems. Please use the existing concepts.")
-        sys.exit(0)
+        list_existing_concepts(variables_api)
+        print("\n" + "=" * 60)
+        print("OPTIONS:")
+        print("1. Use existing concepts to create variables")
+        print("2. Create additional basic concepts anyway")
+        print("3. Exit without changes")
+        choice = input("\nChoose an option (1/2/3): ")
+        
+        if choice == "1":
+            print("Using existing concepts to create variables...")
+            # TODO: Could implement logic to use existing concepts
+            print("⚠️ Feature not yet implemented. Please use option 2 or 3.")
+            sys.exit(0)
+        elif choice == "2":
+            print("Creating additional basic concepts...")
+        elif choice == "3":
+            print("Exiting without changes.")
+            sys.exit(0)
+        else:
+            print("Invalid choice. Exiting.")
+            sys.exit(0)
     else:
         print("📭 No concepts found in the system")
         response = input("\nWould you like to create basic demo concepts and variables? (y/n): ")
@@ -326,10 +496,11 @@ def main():
     print("\n" + "=" * 60)
     print("📊 Summary:")
     print(f"✓ Successfully created {len(created_vars)} variables")
+    
     if created_vars:
         print("\nCreated variables:")
         for var in created_vars:
-            print(f"  - {var['name']} ({var['uri']})")
+            print(f"  - {var['name']}")
     
     if failed_vars:
         print(f"\n✗ Failed to create {len(failed_vars)} variables")
