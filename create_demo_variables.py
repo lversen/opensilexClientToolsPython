@@ -56,12 +56,25 @@ def check_if_concepts_exist(variables_api):
 
 def extract_uri_from_response(response):
     """Extract URI string from API response (handles various response formats)"""
-    if isinstance(response, str):
+    
+    # Handle dictionary response with 'result' key (the format your API is returning)
+    if isinstance(response, dict):
+        if 'result' in response and isinstance(response['result'], list):
+            if len(response['result']) > 0:
+                return response['result'][0]  # Return the first URI in the result list
+        elif 'uri' in response:
+            return response['uri']
+    
+    # Handle string response
+    elif isinstance(response, str):
         return response
+    
+    # Handle object with uri attribute
     elif hasattr(response, 'uri'):
         return response.uri
+    
+    # Handle object with __dict__
     elif hasattr(response, '__dict__'):
-        # If it's an object, try to find a URI field
         response_dict = response.__dict__
         if 'uri' in response_dict:
             return response_dict['uri']
@@ -69,9 +82,10 @@ def extract_uri_from_response(response):
         for key, value in response_dict.items():
             if 'uri' in key.lower() and isinstance(value, str):
                 return value
+    
     # If we still haven't found it, convert to string and see if it looks like a URI
     response_str = str(response)
-    if response_str.startswith('http'):
+    if response_str.startswith('http') or response_str.startswith('opensilex'):
         return response_str
     else:
         print(f"Warning: Could not extract URI from response: {response} (type: {type(response)})")
@@ -142,7 +156,7 @@ def list_existing_concepts(variables_api):
         print(f"  Could not list units: {e}")
 
 def create_basic_concepts(variables_api):
-    """Create basic ontology concepts and return their URIs"""
+    """Create basic ontology concepts needed for demo variables"""
     print(f"\n🏗️ Creating basic ontology concepts...")
     print("-" * 60)
     
@@ -153,43 +167,46 @@ def create_basic_concepts(variables_api):
         'units': []
     }
     
-    # Define basic concepts
+    # Define basic entities
     basic_entities = [
-        {"name": "Plant", "description": "A living plant organism"},
-        {"name": "Soil", "description": "The upper layer of earth"},
+        {"name": "Plant", "description": "Whole plant organism"},
+        {"name": "Soil", "description": "Soil environment"},
         {"name": "Environment", "description": "Environmental conditions"},
-        {"name": "Leaf", "description": "Plant leaf structure"},
-        {"name": "Seed", "description": "Plant reproductive unit"}
+        {"name": "Leaf", "description": "Plant leaf"},
+        {"name": "Seed", "description": "Plant seed"}
     ]
     
+    # Define basic characteristics
     basic_characteristics = [
         {"name": "Height", "description": "Vertical measurement"},
         {"name": "Weight", "description": "Mass measurement"},
-        {"name": "Temperature", "description": "Thermal measurement"},
-        {"name": "Moisture", "description": "Water content measurement"},
-        {"name": "Color", "description": "Visual color characteristic"},
-        {"name": "Count", "description": "Numerical count"},
-        {"name": "Area", "description": "Surface area measurement"},
+        {"name": "Temperature", "description": "Temperature measurement"},
+        {"name": "Moisture", "description": "Water content"},
+        {"name": "Color", "description": "Visual color"},
+        {"name": "Count", "description": "Number of items"},
+        {"name": "Area", "description": "Surface measurement"},
         {"name": "Length", "description": "Linear measurement"}
     ]
     
+    # Define basic methods
     basic_methods = [
-        {"name": "Manual Measurement", "description": "Manual measurement using tools"},
-        {"name": "Visual Observation", "description": "Visual assessment method"},
+        {"name": "Manual Measurement", "description": "Measurement by hand"},
+        {"name": "Visual Observation", "description": "Visual assessment"},
         {"name": "Sensor Reading", "description": "Automated sensor measurement"},
-        {"name": "Laboratory Analysis", "description": "Laboratory-based analysis"},
-        {"name": "Digital Image Analysis", "description": "Computer-based image analysis"}
+        {"name": "Laboratory Analysis", "description": "Lab-based measurement"},
+        {"name": "Digital Image Analysis", "description": "Computer vision measurement"}
     ]
     
+    # Define basic units
     basic_units = [
-        {"name": "centimeter", "symbol": "cm", "description": "Length unit"},
-        {"name": "gram", "symbol": "g", "description": "Mass unit"},
-        {"name": "celsius", "symbol": "°C", "description": "Temperature unit"},
-        {"name": "percent", "symbol": "%", "description": "Percentage unit"},
-        {"name": "count", "symbol": "#", "description": "Count unit"},
-        {"name": "meter", "symbol": "m", "description": "Length unit"},
-        {"name": "kilogram", "symbol": "kg", "description": "Mass unit"},
-        {"name": "liter", "symbol": "L", "description": "Volume unit"}
+        {"name": "centimeter", "description": "Unit of length", "symbol": "cm"},
+        {"name": "gram", "description": "Unit of mass", "symbol": "g"},
+        {"name": "celsius", "description": "Temperature unit", "symbol": "°C"},
+        {"name": "percent", "description": "Percentage", "symbol": "%"},
+        {"name": "count", "description": "Dimensionless count", "symbol": ""},
+        {"name": "meter", "description": "Unit of length", "symbol": "m"},
+        {"name": "kilogram", "description": "Unit of mass", "symbol": "kg"},
+        {"name": "liter", "description": "Unit of volume", "symbol": "L"}
     ]
     
     # Create entities
@@ -390,76 +407,55 @@ def create_demo_variables(variables_api, created_concepts):
     if len(demo_variables) == 0:
         print("⚠️ No variables can be created - insufficient concepts available.")
         return [], []
-
-    # Create the variables
-    print("\n📐 Creating variables...")
+    
+    # Create variables
     for var_data in demo_variables:
         try:
-            # Debug: Print what we're trying to create
-            print(f"  🔧 Attempting to create variable: {var_data['name']}")
-            print(f"     Entity URI: {var_data['entity']}")
-            print(f"     Characteristic URI: {var_data['characteristic']}")
-            print(f"     Method URI: {var_data['method']}")
-            print(f"     Unit URI: {var_data['unit']}")
-            
             variable = VariableCreationDTO(**var_data)
-            
-            # Debug: Print the created DTO to see what it looks like
-            print(f"     Created DTO - Entity: {variable.entity} (type: {type(variable.entity)})")
-            
             result = variables_api.create_variable(body=variable)
-            created_variables.append({
-                'name': var_data['name'],
-                'uri': result,
-                'data': var_data
-            })
-            print(f"  ✓ Created variable: {var_data['name']}")
+            uri = extract_uri_from_response(result)
+            if uri:
+                created_variables.append({'name': var_data['name'], 'uri': uri})
+                print(f"  ✓ Created variable: {var_data['name']} -> {uri}")
+            else:
+                created_variables.append({'name': var_data['name'], 'uri': 'URI extraction failed'})
+                print(f"  ✓ Created variable: {var_data['name']} (but URI extraction failed)")
         except Exception as e:
-            failed_variables.append({
-                'name': var_data['name'],
-                'error': str(e),
-                'data': var_data
-            })
+            failed_variables.append({'name': var_data['name'], 'error': str(e)})
             print(f"  ✗ Failed to create variable {var_data['name']}: {e}")
-            # Debug: Print more details about the failure
-            print(f"     Variable data that failed: {var_data}")
     
     return created_variables, failed_variables
 
 def main():
-    """Main function"""
+    """Main function to orchestrate the demo setup"""
+    # Configuration
+    HOST = "http://48.209.64.78:28081/sandbox/rest"
+    IDENTIFIER = "admin@opensilex.org"
+    PASSWORD = "admin"
+    
     print("OpenSilex Smart Demo Variables Creator")
     print("=" * 50)
-    
-    # Configuration
-    host = "http://48.209.64.78:28081/sandbox/rest"
-    identifier = "admin@opensilex.org"  
-    password = "admin"  # You might want to get this from environment variable
-    
-    print(f"Host: {host}")
-    print(f"User: {identifier}")
+    print(f"Host: {HOST}")
+    print(f"User: {IDENTIFIER}")
     
     # Connect to OpenSilex
-    client = connect_to_opensilex(host, identifier, password)
+    client = connect_to_opensilex(HOST, IDENTIFIER, PASSWORD)
     if not client:
         sys.exit(1)
     
-    # Create Variables API instance
-    try:
-        variables_api = opensilexClientToolsPython.VariablesApi(client)
-    except Exception as e:
-        print(f"✗ Failed to create Variables API instance: {e}")
-        sys.exit(1)
+    # Create API instance
+    variables_api = opensilexClientToolsPython.VariablesApi(client)
     
-    # Check if we have existing concepts
+    # Check if concepts already exist
     print("\n🔍 Checking for existing concepts...")
-    has_concepts = check_if_concepts_exist(variables_api)
+    concepts_exist = check_if_concepts_exist(variables_api)
     
-    if has_concepts:
-        print("✓ Found existing concepts in the system")
+    if concepts_exist:
+        # List existing concepts
         list_existing_concepts(variables_api)
-        print("\n" + "=" * 60)
-        print("OPTIONS:")
+        
+        print("\n⚠️ Concepts already exist in the system.")
+        print("\nOptions:")
         print("1. Use existing concepts to create variables")
         print("2. Create additional basic concepts anyway")
         print("3. Exit without changes")
