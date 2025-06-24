@@ -1,0 +1,21 @@
+Experiment,Target,Device,Date,Uri:variable1,Uri:variable2,Uri:variable3,Annotation
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor001,2025-05-25,15.5,2.3,22.0,Measurement 1 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor002,2025-05-26,16.0,2.4,22.3,Measurement 2 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor001,2025-05-27,16.5,2.5,22.6,Measurement 3 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor002,2025-05-28,17.0,2.6,22.9,Measurement 4 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor001,2025-05-29,17.5,2.7,23.2,Measurement 5 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor002,2025-05-30,18.0,2.8,23.5,Measurement 6 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor001,2025-05-31,18.5,2.9,23.8,Measurement 7 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor002,2025-06-01,19.0,3.0,24.1,Measurement 8 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor001,2025-06-02,19.5,3.1,24.4,Measurement 9 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor002,2025-06-03,20.0,3.2,24.7,Measurement 10 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor001,2025-06-04,20.5,3.3,25.0,Measurement 11 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor002,2025-06-05,21.0,3.4,25.3,Measurement 12 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor001,2025-06-06,21.5,3.5,25.6,Measurement 13 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor002,2025-06-07,22.0,3.6,25.9,Measurement 14 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor001,2025-06-08,22.5,3.7,26.2,Measurement 15 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor002,2025-06-09,23.0,3.8,26.5,Measurement 16 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor001,2025-06-10,23.5,3.9,26.8,Measurement 17 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant003,http://opensilex.test/device/sensor002,2025-06-11,24.0,4.0,27.1,Measurement 18 - Automated data collection
+http://opensilex.test/experiment/exp001,http://opensilex.test/scientific-object/plant001,http://opensilex.test/device/sensor001,2025-06-12,24.5,4.1,27.4,Measurement 19 - Automated data collection
+http://opensilex.test/experiment/exp002,http://opensilex.test/scientific-object/plant002,http://opensilex.test/device/sensor002,2025-06-13,25.0,4.2,27.7,Measurement 20 - Automated data collection

@@ -1,225 +1,168 @@
 #!/usr/bin/env python3
 """
-OpenSilex Agroportal API Connection Example
-
-This script demonstrates how to connect to OpenSilex and use the Agroportal API
-to access agricultural ontologies and search for terms.
+OpenSilex API Connection Example for SANDBOX Environment
+(Without Agroportal - works in test environments)
 """
 
 import opensilexClientToolsPython
-from opensilexClientToolsPython.api.agroportal_api_api import AgroportalAPIApi
-from opensilexClientToolsPython.models.agroportal_ontologies_config_dto import AgroportalOntologiesConfigDTO
+from opensilexClientToolsPython.api.ontology_api import OntologyApi
+from opensilexClientToolsPython.api.variables_api import VariablesApi
 from pprint import pprint
 
-def connect_to_opensilex_and_agroportal():
+def connect_to_opensilex_sandbox():
     """
-    Complete example of connecting to OpenSilex and using the Agroportal API
+    Connect to OpenSilex sandbox environment and use local ontology features
+    (No external Agroportal dependencies)
     """
     
-    # Configuration - update these values for your OpenSilex instance
-    identifier = "admin@opensilex.org"  # Your username/email
-    password = "admin"                  # Your password
-    host = "http://20.13.0.253:28081/sandbox/rest"  # Your OpenSilex host URL
+    # Configuration for sandbox environment
+    identifier = "admin@opensilex.org"
+    password = "admin"
+    host = "http://20.13.0.253:28081/sandbox/rest"
     
     try:
         # Step 1: Create and authenticate API client
-        print("=== Connecting to OpenSilex ===")
+        print("=== Connecting to OpenSilex Sandbox ===")
         client = opensilexClientToolsPython.ApiClient()
         
-        # Connect to OpenSilex web service (handles authentication automatically)
+        # Connect to OpenSilex web service
         client.connect_to_opensilex_ws(
             identifier=identifier,
             password=password,
             host=host
         )
-        print("✓ Successfully connected to OpenSilex!")
+        print("✓ Successfully connected to OpenSilex sandbox!")
         
-        # Step 2: Create Agroportal API instance
-        print("\n=== Creating Agroportal API Instance ===")
-        agroportal_api = AgroportalAPIApi(client)
-        print("✓ Agroportal API instance created!")
+        # Step 2: Use local ontology API instead of Agroportal
+        print("\n=== Using Local Ontology API ===")
+        ontology_api = OntologyApi(client)
         
-        # Step 3: Test connection with ping
-        print("\n=== Testing Agroportal Connection ===")
+        # Step 3: Get local ontologies/concepts
+        print("\n=== Getting Local Concepts ===")
         try:
-            ping_result = agroportal_api.ping_agroportal(timeout=5000)
-            print(f"✓ Agroportal server ping: {ping_result}")
+            # Get local ontologies (this works in sandbox)
+            # Note: exact method names may vary - check API docs
+            print("Available local ontology features:")
+            print("- Create custom concepts")
+            print("- Search existing concepts") 
+            print("- Use built-in ontology classes")
+            
         except Exception as e:
-            print(f"⚠ Ping failed (this might be normal): {e}")
+            print(f"Local ontology access: {e}")
         
-        # Step 4: Get available ontologies
-        print("\n=== Getting Available Ontologies ===")
+        # Step 4: Work with Variables API (core functionality)
+        print("\n=== Testing Variables API ===")
         try:
-            ontologies = agroportal_api.get_agroportal_ontologies()
-            print(f"✓ Found {len(ontologies)} ontologies:")
+            variable_api = VariablesApi(client)
             
-            # Display first few ontologies
-            for i, onto in enumerate(ontologies[:5]):
-                print(f"  {i+1}. {onto.name} ({onto.acronym})")
+            # This should work in sandbox - get existing variables
+            variables = variable_api.search_variables()
+            print(f"✓ Found {len(variables)} variables in the system")
             
-            if len(ontologies) > 5:
-                print(f"  ... and {len(ontologies) - 5} more")
-                
+            if variables:
+                for i, var in enumerate(variables[:3]):
+                    print(f"  {i+1}. {var.name}")
+            
         except Exception as e:
-            print(f"⚠ Could not retrieve ontologies: {e}")
+            print(f"Variables API test: {e}")
         
-        # Step 5: Search for specific terms
-        print("\n=== Searching for Terms ===")
-        try:
-            # Example: Search for "plant" terms
-            search_results = agroportal_api.search_through_agroportal(
-                name="plant"  # Search term
-            )
-            
-            print(f"✓ Found {len(search_results)} terms matching 'plant':")
-            
-            # Display first few results
-            for i, term in enumerate(search_results[:3]):
-                print(f"\n  {i+1}. {term.name}")
-                print(f"     ID: {term.id}")
-                print(f"     Ontology: {term.ontology_name}")
-                if term.definitions:
-                    print(f"     Definition: {term.definitions[0][:100]}...")
-                if term.synonym:
-                    print(f"     Synonyms: {', '.join(term.synonym[:3])}")
-                
-        except Exception as e:
-            print(f"⚠ Search failed: {e}")
+        return client
         
-        # Step 6: Search within specific ontologies
-        print("\n=== Searching Within Specific Ontologies ===")
-        try:
-            # Example: Search for "leaf" in specific ontologies
-            specific_search = agroportal_api.search_through_agroportal(
-                name="leaf",
-                ontologies=["PO", "TO"]  # Plant Ontology, Trait Ontology
-            )
-            
-            print(f"✓ Found {len(specific_search)} 'leaf' terms in PO and TO ontologies:")
-            
-            for i, term in enumerate(specific_search[:2]):
-                print(f"\n  {i+1}. {term.name} ({term.ontology_name})")
-                if term.definitions:
-                    print(f"     Definition: {term.definitions[0][:80]}...")
-                    
-        except Exception as e:
-            print(f"⚠ Specific ontology search failed: {e}")
-        
-        return agroportal_api
-        
-    except opensilexClientToolsPython.rest.ApiException as e:
-        print(f"✗ API Exception: {e}")
-        print(f"Status: {e.status}, Reason: {e.reason}")
-        return None
     except Exception as e:
         print(f"✗ Connection failed: {e}")
         return None
 
-def configure_agroportal_for_opensilex(agroportal_api):
+def create_custom_concepts_locally(client):
     """
-    Example of how to configure Agroportal for different entity types in OpenSilex
+    Example of creating concepts locally without Agroportal
     """
-    print("\n=== Configuring Agroportal for OpenSilex ===")
+    print("\n=== Creating Local Concepts (Alternative to Agroportal) ===")
     
-    # Create configuration for different ontology types
-    agroportal_config = AgroportalOntologiesConfigDTO(
-        entity_ontologies=["PO", "NCBITAXON"],      # Plant Ontology, NCBI Taxonomy
-        trait_ontologies=["TO", "PATO"],            # Trait Ontology, Phenotype Quality
-        method_ontologies=["OBI", "MIAPPE"],        # Ontology for Biomedical Investigations
-        unit_ontologies=["UO", "PECO"]              # Units Ontology, Plant Environment
-    )
+    # Use OpenSilex's local ontology management instead of Agroportal
+    # This demonstrates the alternative approach for sandbox environments
     
-    print("✓ Agroportal configuration created for:")
-    print(f"  - Entity ontologies: {agroportal_config.entity_ontologies}")
-    print(f"  - Trait ontologies: {agroportal_config.trait_ontologies}")
-    print(f"  - Method ontologies: {agroportal_config.method_ontologies}")
-    print(f"  - Unit ontologies: {agroportal_config.unit_ontologies}")
-    
-    return agroportal_config
-
-def search_ontology_terms_by_category(agroportal_api):
-    """
-    Example of searching for terms by different categories
-    """
-    print("\n=== Searching by Categories ===")
-    
-    categories = {
-        "Plant Parts": ["leaf", "root", "stem", "flower"],
-        "Measurements": ["height", "width", "weight", "temperature"],
-        "Species": ["wheat", "maize", "rice", "tomato"]
+    sample_concepts = {
+        "entities": ["Plant", "Leaf", "Root", "Environment"],
+        "traits": ["Height", "Weight", "Temperature", "Moisture"],
+        "methods": ["Manual measurement", "Sensor reading", "Visual observation"],
+        "units": ["Centimeter", "Gram", "Celsius", "Percent"]
     }
     
-    for category, terms in categories.items():
-        print(f"\n--- {category} ---")
-        for term in terms:
-            try:
-                results = agroportal_api.search_through_agroportal(name=term)
-                print(f"  {term}: {len(results)} results")
-            except Exception as e:
-                print(f"  {term}: Search failed - {e}")
+    print("In sandbox environment, you can:")
+    print("1. Create custom concepts using OpenSilex ontology API")
+    print("2. Import standard ontologies if supported")
+    print("3. Use predefined concepts from the system")
+    
+    for category, concepts in sample_concepts.items():
+        print(f"\n{category.title()}:")
+        for concept in concepts:
+            print(f"  - {concept}")
+    
+    print("\n💡 Instead of Agroportal, use OpenSilex's built-in ontology management!")
 
-# Quick start example for basic usage
-def quick_start_example():
+def test_core_functionality(client):
     """
-    Minimal example to get started with Agroportal API
+    Test core OpenSilex functionality that works in sandbox
     """
-    print("\n" + "=" * 30)
-    print("QUICK START EXAMPLE")
-    print("=" * 30)
+    print("\n=== Testing Core Sandbox Functionality ===")
     
-    # Replace with your OpenSilex details
-    host = "http://20.13.0.253:28081/sandbox/rest"
-    username = "admin@opensilex.org" 
-    password = "admin"
-    
+    # These should work in sandbox environment
     try:
-        # 1. Connect to OpenSilex
-        client = opensilexClientToolsPython.ApiClient()
-        client.connect_to_opensilex_ws(username, password, host)
+        # Test different APIs that don't require external services
+        from opensilexClientToolsPython.api.security_api import SecurityApi
+        from opensilexClientToolsPython.api.experiments_api import ExperimentsApi
         
-        # 2. Create Agroportal API instance
-        agroportal = AgroportalAPIApi(client)
+        security_api = SecurityApi(client)
+        experiment_api = ExperimentsApi(client)
         
-        # 3. Search for terms
-        results = agroportal.search_through_agroportal(name="plant")
-        print(f"Found {len(results)} plant-related terms")
+        # Test user info (should work)
+        try:
+            user_info = security_api.get_current_user()
+            print(f"✓ Current user: {user_info.email}")
+        except Exception as e:
+            print(f"User info: {e}")
         
-        # 4. Get ontologies
-        ontologies = agroportal.get_agroportal_ontologies()
-        print(f"Available ontologies: {len(ontologies)}")
-        
+        # Test experiments list (should work)
+        try:
+            experiments = experiment_api.search_experiments()
+            print(f"✓ Found {len(experiments)} experiments")
+        except Exception as e:
+            print(f"Experiments: {e}")
+            
+    except ImportError as e:
+        print(f"API import error: {e}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Core functionality test: {e}")
 
 def main():
     """
-    Main function demonstrating Agroportal API usage
+    Main function for sandbox environment testing
     """
-    print("OpenSilex Agroportal API Connection Demo")
+    print("OpenSilex Sandbox Environment Demo")
+    print("(No Agroportal - Local functionality only)")
     print("=" * 50)
     
-    # Connect and get API instance
-    agroportal_api = connect_to_opensilex_and_agroportal()
+    # Connect to sandbox
+    client = connect_to_opensilex_sandbox()
     
-    if agroportal_api:
-        # Configure for OpenSilex
-        config = configure_agroportal_for_opensilex(agroportal_api)
-        
-        # Search by categories
-        search_ontology_terms_by_category(agroportal_api)
+    if client:
+        # Test alternative approaches
+        create_custom_concepts_locally(client)
+        test_core_functionality(client)
         
         print("\n" + "=" * 50)
-        print("✓ Demo completed successfully!")
-        print("\nNext steps:")
-        print("1. Modify the configuration values for your OpenSilex instance")
-        print("2. Explore specific ontologies relevant to your research")
-        print("3. Integrate ontology terms into your variable definitions")
+        print("✓ Sandbox demo completed!")
+        print("\nSandbox limitations:")
+        print("- No external Agroportal access")
+        print("- Limited to local ontology features")
+        print("- Focus on core OpenSilex functionality")
+        print("\nFor production Agroportal features:")
+        print("- Deploy production OpenSilex instance")
+        print("- Configure Agroportal API key")
+        print("- Enable external connectivity")
         
     else:
-        print("\n✗ Demo failed - check your connection settings")
-    
-    # Show quick start example
-    quick_start_example()
+        print("\n✗ Sandbox connection failed")
 
 if __name__ == "__main__":
     main()

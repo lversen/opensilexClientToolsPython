@@ -63,7 +63,7 @@ def main():
     # Configuration - update these values for your OpenSILEX instance
     identifier = "admin@opensilex.org"
     password = "admin" 
-    host = "http://48.209.64.78:28081/sandbox/rest"
+    host = "http://20.13.0.253:28081/sandbox/sandbox/rest"
     
     print("=== OpenSILEX Authentication Test ===")
     print(f"Host: {host}")
