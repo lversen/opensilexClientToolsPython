@@ -8,6 +8,21 @@ capturing and using the returned URIs from concept creation.
 
 Fixed Issue: The original script was passing JSON objects to VariableCreationDTO.entity
 instead of URI strings, causing "Cannot deserialize value of type java.net.URI" errors.
+
+Usage:
+    python script.py <host> [--identifier <email>] [--password <password>]
+    
+Host can be:
+    - Just an IP: 48.209.64.78 (will use http://{ip}:28081/sandbox/rest)
+    - IP with port: 48.209.64.78:8080 (will use http://{ip}:{port}/sandbox/rest)
+    - Hostname: localhost (will use http://localhost:28081/sandbox/rest)
+    - Full URL: http://localhost:8080/rest
+    
+Examples:
+    python script.py 48.209.64.78
+    python script.py 192.168.1.100:8080
+    python script.py localhost
+    python script.py http://localhost:8080/rest --identifier user@example.com --password mypass
 """
 
 import opensilexClientToolsPython
@@ -17,6 +32,45 @@ from opensilexClientToolsPython.models.characteristic_creation_dto import Charac
 from opensilexClientToolsPython.models.method_creation_dto import MethodCreationDTO
 from opensilexClientToolsPython.models.unit_creation_dto import UnitCreationDTO
 import sys
+import argparse
+import re
+
+def construct_host_url(host_input):
+    """
+    Construct full host URL from various input formats.
+    Accepts:
+    - Full URL: http://example.com:8080/rest
+    - IP address: 192.168.1.1
+    - IP with port: 192.168.1.1:8080
+    - Hostname: localhost
+    - Hostname with port: localhost:8080
+    """
+    # Check if it's already a full URL (starts with http:// or https://)
+    if host_input.startswith(('http://', 'https://')):
+        return host_input
+    
+    # Check if it's an IP address (basic pattern) or hostname
+    # This regex matches IP addresses and hostnames with optional port
+    ip_pattern = r'^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+)(:\d+)?$'
+    match = re.match(ip_pattern, host_input)
+    
+    if match:
+        host_part = match.group(1)
+        port_part = match.group(2)  # This includes the colon if present
+        
+        # Default port and path based on the example
+        default_port = ':28081'
+        default_path = '/sandbox/rest'
+        
+        # If no port specified, use default
+        if not port_part:
+            port_part = default_port
+        
+        # Construct the full URL
+        return f"http://{host_part}{port_part}{default_path}"
+    
+    # If we can't parse it, return as-is and let the connection fail with a clear error
+    return host_input
 
 def connect_to_opensilex(host, identifier, password):
     """Connect to OpenSilex instance and return authenticated client"""
@@ -428,10 +482,60 @@ def create_demo_variables(variables_api, created_concepts):
 
 def main():
     """Main function to orchestrate the demo setup"""
-    # Configuration
-    HOST = "http://48.209.64.78:28081/sandbox/rest"
-    IDENTIFIER = "admin@opensilex.org"
-    PASSWORD = "admin"
+    # Set up command line argument parser
+    parser = argparse.ArgumentParser(
+        description='OpenSilex Smart Demo Variables Creator - Creates demo ontology concepts and variables',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s 48.209.64.78                          # Just IP address (uses default port 28081 and path /sandbox/rest)
+  %(prog)s 192.168.1.100:8080                    # IP with custom port
+  %(prog)s localhost                              # Hostname
+  %(prog)s http://localhost:8080/rest            # Full URL
+  %(prog)s 48.209.64.78 --identifier user@example.com
+  %(prog)s 192.168.1.100 -i admin@example.com -p secretpass
+        """
+    )
+    
+    # Add arguments
+    parser.add_argument('host', 
+                        help='OpenSilex host (IP address, hostname, or full URL)')
+    
+    parser.add_argument('-i', '--identifier', 
+                        default='admin@opensilex.org',
+                        help='User identifier/email for authentication (default: admin@opensilex.org)')
+    
+    parser.add_argument('-p', '--password', 
+                        default='admin',
+                        help='Password for authentication (default: admin)')
+    
+    parser.add_argument('--port', 
+                        type=int,
+                        help='Override default port 28081 (only used when host is IP/hostname without port)')
+    
+    parser.add_argument('--path', 
+                        default='/sandbox/rest',
+                        help='Override default path (default: /sandbox/rest)')
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Construct the full host URL
+    HOST = construct_host_url(args.host)
+    
+    # If user specified custom port or path and didn't provide full URL, reconstruct
+    if not args.host.startswith(('http://', 'https://')):
+        if args.port or args.path != '/sandbox/rest':
+            # Extract the host part without port
+            match = re.match(r'^([^:]+)(:\d+)?', args.host)
+            if match:
+                host_part = match.group(1)
+                port = f":{args.port}" if args.port else (match.group(2) or ':28081')
+                path = args.path
+                HOST = f"http://{host_part}{port}{path}"
+    
+    IDENTIFIER = args.identifier
+    PASSWORD = args.password
     
     print("OpenSilex Smart Demo Variables Creator")
     print("=" * 50)
